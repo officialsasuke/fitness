@@ -25,7 +25,7 @@ h1{font:700 clamp(32px,8vw,42px)/1 var(--hd);letter-spacing:.1em;text-transform:
 .chip svg.i{color:var(--gold2);width:24px;height:24px}
 .chip b{font:700 clamp(19px,4.6vw,26px)/1 var(--hd);white-space:nowrap}
 .chip small{display:block;font:600 11px/1 var(--hd);letter-spacing:.14em;color:var(--mut);text-transform:uppercase;margin-top:3px;white-space:nowrap}
-main{padding-top:14px;padding-bottom:calc(170px + env(safe-area-inset-bottom))}
+main.wrap{padding-top:14px;padding-bottom:calc(170px + env(safe-area-inset-bottom))}
 p{margin:0}
 .mut{color:var(--mut)}.small{font-size:14px}
 .sec{display:flex;justify-content:space-between;align-items:baseline;gap:4px 14px;flex-wrap:wrap;margin:26px 0 12px}
