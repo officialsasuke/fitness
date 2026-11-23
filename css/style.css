@@ -273,3 +273,13 @@ label.btn.ghost{display:inline-flex}
 .pex .pity{margin:4px 0 6px}
 .pex[open]{padding-bottom:12px}
 .res .chip{min-height:54px}
+
+/* ---------- Animierter Hintergrund ---------- */
+#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;display:block}
+#bg[hidden]{display:none}
+.card{background:linear-gradient(180deg,rgba(28,29,35,.72),rgba(21,22,27,.8))}
+.hatch{background:repeating-linear-gradient(135deg,rgba(212,171,90,.075) 0 1px,transparent 1px 9px),linear-gradient(160deg,rgba(43,37,23,.74) 0,rgba(23,24,29,.78) 58%)}
+.nav,#rest{position:fixed}
+.nav .wrap,.rin{position:relative}
+.chip{background:linear-gradient(180deg,rgba(23,24,29,.8),rgba(16,17,21,.85))}
+.datebar .d{background:rgba(16,17,21,.75)}

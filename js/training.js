@@ -1,4 +1,5 @@
 // Trainingsplan, Logbuch, Fortschritt und Plan-Ansicht
+import { bgEnabled } from './bg.js';
 import { $, S, save, app, toast, esc, ic, today, fmtD, fmtS, nf, mmss, days, setBw, bwSorted, bwRate, replaceState, mondayOf } from './core.js';
 
 export const PLAN = {
@@ -129,7 +130,9 @@ export function planView() {
   <section class="card cut corner"><div class="ph"><div class="t">${ic('food')}<h2 style="font-size:32px">Essen &amp; Erholung</h2></div></div><ul class="rules">
    ${R('Kalorien:', 'grob 2.800–3.000 kcal am Tag. 1× pro Woche morgens wiegen: +0,25–0,5 kg pro Woche passt. Ziel unter Essen anpassbar.')}
    ${R('Protein:', '105–130 g am Tag, auf 3–4 Mahlzeiten verteilt (Eier, Quark, Skyr, Milch, Hähnchen, Thunfisch, Linsen).')}
-   ${R('Trinken:', '2–3 Liter Wasser.')}${R('Schlaf:', '7–9 Stunden – da wachsen die Muskeln.')}</ul></section>`;
+   ${R('Trinken:', '2–3 Liter Wasser.')}${R('Schlaf:', '7–9 Stunden – da wachsen die Muskeln.')}</ul></section>
+  <div class="sec"><p class="lab">Einstellungen</p></div>
+  <section class="card cut"><label class="tog" style="margin:0"><input type="checkbox" data-act="bg" ${bgEnabled() ? 'checked' : ''}><span class="sw"></span><span><b>Animierter Hintergrund</b><span class="mut small">Ausschalten spart etwas Akku</span></span></label></section>`;
 }
 
 /* ---------- Fortschritt ---------- */

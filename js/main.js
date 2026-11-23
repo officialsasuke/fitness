@@ -2,6 +2,7 @@
 import { $, app } from './core.js';
 import * as T from './training.js';
 import * as F from './food.js';
+import { initBg, setBg } from './bg.js';
 
 const VIEWS = { training: T.trainView, essen: F.foodView, fortschritt: T.progView, plan: T.planView };
 const view = () => { const h = location.hash.slice(1); return VIEWS[h] ? h : 'training'; };
@@ -27,7 +28,7 @@ document.addEventListener('click', ev => {
   if (b && ACT[b.dataset.act] && !b.disabled) ACT[b.dataset.act](b, ev);
 });
 document.addEventListener('input', ev => { T.onInput(ev); F.onInput(ev); });
-document.addEventListener('change', ev => { T.onChange(ev); F.onChange(ev); });
+document.addEventListener('change', ev => { if (ev.target.dataset.act === 'bg') { setBg(ev.target.checked); return; } T.onChange(ev); F.onChange(ev); });
 document.addEventListener('submit', ev => {
   const f = ev.target.dataset.form;
   if (f && ACT[f]) { ev.preventDefault(); ACT[f](ev.target, ev); }
@@ -35,7 +36,7 @@ document.addEventListener('submit', ev => {
 addEventListener('hashchange', () => { render(); scrollTo(0, 0); });
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') render(); });
 
-T.init(); F.init();
+T.init(); F.init(); initBg();
 render();
 
 // Offline-Fähigkeit und dauerhafter Speicher
