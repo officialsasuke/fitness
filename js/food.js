@@ -101,9 +101,8 @@ export function foodView() {
   const E = entries(day), T = totals(E), G = goals(), isT = day === today();
   const meals = MEALS.map(([m, lab]) => {
     const list = E.filter(e => e.meal === m), t = totals(list);
-    return `<section class="card meal cut corner"><div class="mh"><div><h3>${lab}</h3><p class="mut small">${list.length ? `${fmtK(t.p)} g Protein` : 'Noch nichts eingetragen'}</p></div><b class="mk">${fmtK(t.kcal)}<small> kcal</small></b></div>
-     ${list.map(e => { const a = amt(e.n, e.g); return `<button class="ent" data-act="f-edit" data-id="${e.id}"><span class="nm">${esc(e.name)}</span><span class="am">${nf(e.g)} g${e.brand && e.brand !== 'Standardwert' ? ' · ' + esc(e.brand) : ''} · ${fmtK(a.p)} g P</span><span class="kc">${fmtK(a.kcal)}</span></button>`; }).join('')}
-     <button class="lnk" data-act="f-add" data-m="${m}">${ic('plus')}Hinzufügen</button></section>`;
+    return `<div class="meal"><div class="mh"><h3>${lab}</h3><span class="mk">${list.length ? fmtK(t.kcal) + '<small> kcal</small>' : ''}</span><button class="ibtn sm add" data-act="f-add" data-m="${m}" aria-label="Zu ${lab} hinzufügen">${ic('plus')}</button></div>
+     ${list.map(e => { const a = amt(e.n, e.g); return `<button class="ent" data-act="f-edit" data-id="${e.id}"><span class="nm">${esc(e.name)}</span><span class="am">${nf(e.g)} g · ${fmtK(a.p)} g Protein</span><span class="kc">${fmtK(a.kcal)}</span></button>`; }).join('')}</div>`;
   }).join('');
   const hist = [];
   for (let i = 6; i >= 0; i--) {
@@ -111,23 +110,20 @@ export function foodView() {
     hist.push(`<li><span class="${d === day ? 'cur' : ''}">${fmtD(d)}</span><div class="pity${t.kcal > G.kcal ? ' ice' : ''}"><i style="width:${pc}%"></i></div><span>${t.kcal ? fmtK(t.kcal) : '–'}</span></li>`);
   }
   const r = bwRate();
-  const tip = r === null ? 'Wiege dich 1× pro Woche (Fortschritt → Körpergewicht). Ab 2 Wochen Daten schlage ich dir hier eine Anpassung vor.'
-    : r < 0.2 ? `Du nimmst ${nf(r.toFixed(2))} kg pro Woche zu – etwas wenig. Erhöhe das Ziel um ca. 200 kcal.`
-    : r > 0.6 ? `Du nimmst ${nf(r.toFixed(2))} kg pro Woche zu – etwas schnell. Senke das Ziel um ca. 200 kcal.`
-    : `Du nimmst ${nf(r.toFixed(2))} kg pro Woche zu – passt genau. Ziel so lassen.`;
+  const tip = r === null ? 'Ab 2 Wochen Gewichtsdaten bekommst du hier einen Tipp.'
+    : r < 0.2 ? `+${nf(r.toFixed(2))} kg/Woche – etwas wenig: Ziel um ca. 200 kcal erhöhen.`
+    : r > 0.6 ? `+${nf(r.toFixed(2))} kg/Woche – etwas schnell: Ziel um ca. 200 kcal senken.`
+    : `+${nf(r.toFixed(2))} kg/Woche – passt genau.`;
   return `<div class="datebar"><button class="ibtn" data-act="f-day" data-v="-1" aria-label="Vorheriger Tag">${ic('left')}</button>
-   <button class="d" data-act="f-today"><span class="lab" style="font-size:12px;display:block">${isT ? 'Heute' : 'Zu heute springen'}</span>${fmtD(day)}</button>
+   <button class="d" data-act="f-today">${isT ? 'Heute' : fmtD(day)}</button>
    <button class="ibtn" data-act="f-day" data-v="1" aria-label="Nächster Tag" ${isT ? 'disabled' : ''}>${ic('right')}</button></div>
   <section class="card hatch cut corner sum">${ring(T, G)}<div>${mac('Protein', T.p, G.p, '')}${mac('Kohlenhydrate', T.c, G.c, 'ice')}${mac('Fett', T.f, G.f, 'dim')}</div></section>
-  <div class="sec"><p class="lab">Mahlzeiten</p><p class="hint">Antippen zum Ändern</p></div>
-  ${meals}
-  <div class="sec"><p class="lab">Letzte 7 Tage</p><p class="hint">kcal im Vergleich zum Ziel</p></div>
-  <section class="card cut corner"><ul class="days7">${hist.join('')}</ul></section>
-  <div class="sec"><p class="lab">Tagesziel</p></div>
-  <section class="card cut corner"><p class="sg">${ic('up')}<span>${tip}</span></p>
-   <div class="grid3"><label class="fl"><span class="lab">kcal</span><input id="gK" type="number" inputmode="numeric" value="${S.goals.kcal}"></label><label class="fl"><span class="lab">Protein g</span><input id="gP" type="number" inputmode="numeric" value="${S.goals.p}"></label><label class="fl"><span class="lab">Fett g</span><input id="gF" type="number" inputmode="numeric" value="${S.goals.f}"></label></div>
-   <p class="mut small" style="margin:10px 0">Kohlenhydrate ergeben sich aus dem Rest: ${fmtK(G.c)} g.</p>
-   <button class="btn ghost" data-act="f-goals">${ic('check')}Ziel speichern</button></section>`;
+  <section class="card cut meals">${meals}</section>
+  <details class="card cut tech wk"><summary>${ic('chart')}Woche &amp; Tagesziel</summary>
+   <ul class="days7">${hist.join('')}</ul>
+   <p class="sg" style="margin-top:14px">${ic('up')}<span>${tip}</span></p>
+   <div class="grid3"><label class="fl"><span class="lab">kcal</span><input id="gK" type="number" inputmode="numeric" value="${S.goals.kcal}"></label><label class="fl"><span class="lab">Protein</span><input id="gP" type="number" inputmode="numeric" value="${S.goals.p}"></label><label class="fl"><span class="lab">Fett</span><input id="gF" type="number" inputmode="numeric" value="${S.goals.f}"></label></div>
+   <div class="row"><button class="btn ghost" data-act="f-goals">${ic('check')}Ziel speichern</button></div></details>`;
 }
 
 /* ---------- Hinzufügen-Fenster ---------- */

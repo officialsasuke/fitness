@@ -1,21 +1,12 @@
 // Start, Navigation und Ereignis-Verteilung
-import { $, app, ic, fmtK, nf, today, mondayOf, bwSorted } from './core.js';
+import { $, app } from './core.js';
 import * as T from './training.js';
 import * as F from './food.js';
 
 const VIEWS = { training: T.trainView, essen: F.foodView, fortschritt: T.progView, plan: T.planView };
 const view = () => { const h = location.hash.slice(1); return VIEWS[h] ? h : 'training'; };
 
-function resBar() {
-  const s = T.sorted(), mon = mondayOf(today()), bw = bwSorted();
-  const chips = [
-    ['db', s.length, 'Einheiten'],
-    ['ring', s.filter(x => x.date >= mon).length + '/3', 'Wochenziel'],
-    ['food', fmtK(F.kcalToday()), 'kcal heute'],
-    ['scale', bw.length ? nf(bw[bw.length - 1].kg) : '–', 'Gewicht']
-  ];
-  return chips.map(([i, v, l]) => `<div class="chip cut">${ic(i)}<div><b>${v}</b><small>${l}</small></div></div>`).join('');
-}
+const TITLES = { training: 'Training', essen: 'Essen', fortschritt: 'Fortschritt', plan: 'Plan' };
 
 function render() {
   const v = view();
@@ -23,7 +14,7 @@ function render() {
     const on = a.getAttribute('href') === '#' + v;
     a.classList.toggle('on', on); on ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current');
   });
-  $('#res').innerHTML = resBar();
+  $('#ttl').textContent = TITLES[v]; document.title = TITLES[v] + ' · Fitness';
   T.beforeRender();
   $('#app').innerHTML = VIEWS[v]();
   T.afterRender(v);

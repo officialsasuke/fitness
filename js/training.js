@@ -1,5 +1,5 @@
 // Trainingsplan, Logbuch, Fortschritt und Plan-Ansicht
-import { $, S, save, app, toast, esc, ic, today, fmtD, fmtS, nf, mmss, days, setBw, bwSorted, bwRate, replaceState } from './core.js';
+import { $, S, save, app, toast, esc, ic, today, fmtD, fmtS, nf, mmss, days, setBw, bwSorted, bwRate, replaceState, mondayOf } from './core.js';
 
 export const PLAN = {
   A: { name: 'Training A', focus: 'Beine · Brust · Rücken · Schultern · Bauch', ex: [
@@ -28,13 +28,13 @@ function lastFor(id) { const s = sorted(); for (let i = s.length - 1; i >= 0; i-
 function suggest(e) {
   const L = lastFor(e.id);
   if (e.t === 'kg') {
-    if (!L) return { kg: e.kg, r: e.lo, why: 'Startgewicht. Die letzten 2 Wdh. sollen schwer sein – sonst anpassen.' };
+    if (!L) return { kg: e.kg, r: e.lo, short: 'Startgewicht – letzte 2 Wdh. sollen schwer sein' };
     const kg = Math.max(...L.map(x => x.kg)), top = L.every(x => x.r >= e.hi);
-    return top ? { kg: +(kg + STEP).toFixed(2), r: e.lo, why: 'Letztes Mal alle Sätze mit ' + e.hi + ' Wdh. – heute +1,5 kg.' }
-      : { kg, r: Math.min(e.hi, Math.max(...L.map(x => x.r)) + 1), why: 'Gleiches Gewicht wie letztes Mal, versuch 1 Wdh. mehr.' };
+    return top ? { kg: +(kg + STEP).toFixed(2), r: e.lo, short: 'Level up: +1,5 kg' }
+      : { kg, r: Math.min(e.hi, Math.max(...L.map(x => x.r)) + 1), short: 'Gleiches Gewicht, 1 Wdh. mehr' };
   }
-  const u = e.t === 'sec' ? ' s' : ' Wdh.'; if (!L) return { r: e.lo, why: 'Start mit ' + e.lo + u + '.' };
-  const b = Math.max(...L.map(x => x.r)); return { r: b + (e.t === 'sec' ? 5 : 1), why: 'Letztes Mal max. ' + b + u + ' – heute etwas mehr.' };
+  const u = e.t === 'sec' ? ' s' : ' Wdh.'; if (!L) return { r: e.lo, short: 'Start mit ' + e.lo + u };
+  const b = Math.max(...L.map(x => x.r)); return { r: b + (e.t === 'sec' ? 5 : 1), short: 'Letztes Mal ' + b + u + ' – heute mehr' };
 }
 function makeDraft(type, light, date, prev) {
   const d = { type, light: !!light, date: date || today(), note: prev ? prev.note : '', bw: prev ? prev.bw : '', ex: {} };
@@ -57,38 +57,36 @@ export function trainView() {
   const P = PLAN[draft.type], s = sorted(), last = s[s.length - 1]; let warn = '';
   if (last) {
     const g = days(last.date, draft.date);
-    if (g === 0) warn = 'Heute hast du schon trainiert. Nächstes Training frühestens übermorgen.';
-    else if (g === 1) warn = 'Gestern war Training. Zwischen zwei Einheiten mindestens 1 Ruhetag – heute lieber Pause.';
+    if (g === 0) warn = 'Heute schon trainiert – nächstes Mal frühestens übermorgen.';
+    else if (g === 1) warn = 'Gestern war Training. Heute lieber Pause.';
   }
   return `<section class="card hero hatch cut corner">
-  <div class="in"><div class="hero-top"><div><p class="kick">Training · Woche ${weekNo(draft.date)}</p>
-   <div style="display:flex;align-items:center;gap:12px"><span class="dia">${ic('spark')}</span><h2>${P.name}</h2></div>
-   <p class="focus">${P.focus}</p></div>
+  <div class="hero-top"><div><p class="kick">${fmtD(draft.date)} · Woche ${weekNo(draft.date)}</p><h2>${P.name}</h2><p class="focus">${P.focus}</p></div>
   <div class="seg" role="group" aria-label="Training wählen">${['A', 'B'].map(t => `<button data-act="type" data-v="${t}" class="${draft.type === t ? 'on' : ''}" aria-pressed="${draft.type === t}">${t}</button>`).join('')}</div></div>
   ${warn ? `<p class="warn">${ic('warn')}<span>${warn}</span></p>` : ''}
-  <label class="tog"><input type="checkbox" data-act="light" ${draft.light ? 'checked' : ''}><span class="sw"></span><span><b>Leichter Tag</b><span class="mut small">Muskelkater oder harter Arbeitstag: 1 Satz weniger, ca. 15 % weniger Gewicht</span></span></label></div>
-  <div class="meta"><label>${ic('cal')}<span>${fmtD(draft.date)}</span></label><label><span class="lab" style="font-size:13px">Datum ändern</span><input type="date" data-act="date" value="${draft.date}" aria-label="Datum"></label></div>
-  <div class="goldbar"></div>
+  <label class="tog"><input type="checkbox" data-act="light" ${draft.light ? 'checked' : ''}><span class="sw"></span><span><b>Leichter Tag</b><span class="mut small">1 Satz weniger, 15 % leichter</span></span></label>
  </section>
- <div class="sec"><p class="lab">Übungen in Reihenfolge</p><p class="hint">Nach jedem Satz abhaken</p></div>
  ${P.ex.map(exCard).join('')}
- <section class="card fin cut corner">
-  <label><span class="lab">Körpergewicht heute (optional)</span><span class="unit-in"><input type="number" inputmode="decimal" step="0.1" data-act="bw" value="${esc(draft.bw)}" placeholder="65"><b>KG</b></span></label>
-  <label><span class="lab">Notiz</span><textarea data-act="note" rows="2" placeholder="Wie lief's? Arbeitstag, Schlaf, Schmerzen …">${esc(draft.note)}</textarea></label>
-  <button class="btn" data-act="save">${ic('save')}Einheit speichern</button>
-  <p class="mut small" style="margin-top:10px">Wird auf diesem Gerät gespeichert. Zum Übertragen: Fortschritt → Daten sichern.</p>
+ <section class="card cut fin">
+  <details class="more"><summary>${ic('plus')}Notiz, Datum, Körpergewicht</summary>
+   <label class="fl"><span class="lab">Notiz</span><textarea data-act="note" rows="2" placeholder="Wie lief's?">${esc(draft.note)}</textarea></label>
+   <div class="grid2"><label class="fl"><span class="lab">Datum</span><input type="date" data-act="date" value="${draft.date}"></label>
+   <label class="fl"><span class="lab">Gewicht kg</span><input type="number" inputmode="decimal" step="0.1" data-act="bw" value="${esc(draft.bw)}" placeholder="65"></label></div>
+  </details>
+  <button class="btn" data-act="save">${ic('save')}Training speichern</button>
  </section>`;
 }
 function exCard(e, i) {
   const sets = draft.ex[e.id], g = suggest(e), kg = e.t === 'kg';
-  return `<article class="card ex cut corner ${kg ? '' : 'nokg'}">
-  <div class="head hatch"><div class="tags"><span class="badge">${i + 1}</span>${ic(tIcon(e))}</div><span></span>
-   <h3>${e.n}</h3><p class="tgt">${sets.length} × ${e.lo}–${e.hi}${e.t === 'sec' ? ' s' : ''}${e.side ? ' ' + e.side : ''} · Pause ${mmss(e.rest)}</p></div>
-  <div class="goldbar"></div>
-  <div class="body"><p class="sg">${ic('up')}<span>${esc(g.why)}${kg ? (e.one ? ' Gewicht = 1 Hantel.' : ' Gewicht pro Hantel.') : ''}</span></p>
-  <div class="sets"><div class="sr hd"><span style="text-align:center">Satz</span>${kg ? '<span>kg</span>' : ''}<span>${e.t === 'sec' ? 'Sekunden' : 'Wdh.'}</span><span></span></div>
-  ${sets.map((x, j) => `<div class="sr ${x.done ? 'done' : ''}"><span class="n">${j + 1}</span>${kg ? `<input type="number" inputmode="decimal" step="0.25" min="0" aria-label="${e.n}, Satz ${j + 1}, kg" data-act="kg" data-e="${e.id}" data-i="${j}" value="${x.kg}">` : ''}<input type="number" inputmode="numeric" min="0" aria-label="${e.n}, Satz ${j + 1}, ${e.t === 'sec' ? 'Sekunden' : 'Wiederholungen'}" data-act="r" data-e="${e.id}" data-i="${j}" value="${x.r}"><button class="chk" data-act="done" data-e="${e.id}" data-i="${j}" aria-pressed="${!!x.done}" aria-label="Satz ${j + 1} erledigt">${ic('check')}</button></div>`).join('')}</div>
-  <div class="exf"><button class="lnk" data-act="addset" data-e="${e.id}">${ic('plus')}Satz</button>${sets.length > 1 ? `<button class="lnk" data-act="rmset" data-e="${e.id}">${ic('minus')}Satz</button>` : ''}<details class="tech"><summary>${ic('info')}Technik</summary><p>${e.tip}</p></details></div></div>
+  const unit = e.t === 'sec' ? 's' : '×';
+  const per = kg ? (e.one ? ' · 1 Hantel' : ' · pro Hand') : '';
+  return `<article class="card ex cut ${kg ? '' : 'nokg'}">
+  <div class="exh"><span class="num">${i + 1}</span><div class="t"><h3>${e.n}</h3><p class="tgt">${sets.length} × ${e.lo}–${e.hi}${e.t === 'sec' ? ' s' : ''}${e.side ? ' ' + e.side : ''}${per}</p></div>
+   <button class="ibtn sm" data-act="tip" data-e="${e.id}" aria-label="Technik zu ${e.n}" aria-expanded="false">${ic('info')}</button></div>
+  <p class="tip" id="tip-${e.id}" hidden>${e.tip}</p>
+  <p class="sg">${ic('up')}<span>${esc(g.short)}</span></p>
+  <div class="sets">${sets.map((x, j) => `<div class="sr ${x.done ? 'done' : ''}"><span class="n">${j + 1}</span>${kg ? `<label class="fld"><input type="number" inputmode="decimal" step="0.25" min="0" aria-label="${e.n}, Satz ${j + 1}, kg" data-act="kg" data-e="${e.id}" data-i="${j}" value="${x.kg}"><span>kg</span></label>` : ''}<label class="fld"><input type="number" inputmode="numeric" min="0" aria-label="${e.n}, Satz ${j + 1}, ${e.t === 'sec' ? 'Sekunden' : 'Wiederholungen'}" data-act="r" data-e="${e.id}" data-i="${j}" value="${x.r}"><span>${unit}</span></label><button class="chk" data-act="done" data-e="${e.id}" data-i="${j}" aria-pressed="${!!x.done}" aria-label="Satz ${j + 1} erledigt">${ic('check')}</button></div>`).join('')}</div>
+  <div class="exf"><button class="ibtn sm" data-act="rmset" data-e="${e.id}" aria-label="Satz entfernen" ${sets.length > 1 ? '' : 'disabled'}>${ic('minus')}</button><button class="ibtn sm" data-act="addset" data-e="${e.id}" aria-label="Satz hinzufügen">${ic('plus')}</button></div>
  </article>`;
 }
 function saveSession() {
@@ -142,41 +140,42 @@ function best(e, a) {
   const m = Math.max(...a.map(x => x.r)); return m + (e.t === 'sec' ? ' s' : ' Wdh.');
 }
 export function progView() {
-  CH = {}; const s = sorted();
-  if (!s.length) return `<div class="sec"><p class="lab">Fortschritt</p></div><section class="card hatch cut corner"><h2>Noch keine Einheiten</h2><p style="margin-top:10px">Trag dein erstes Training unter <a href="#training" style="color:var(--gold2)">Training</a> ein. Danach siehst du hier für jede Übung, wie du stärker wirst – und wie viele Wiederholungen dir bis zur nächsten Steigerung fehlen.</p></section>${bwBlock()}${dataBlock()}`;
-  const cards = Object.values(ALL).map(e => {
+  CH = {}; const s = sorted(), mon = mondayOf(today()), bw = bwSorted();
+  const stats = [['db', s.length, 'Einheiten'], ['ring', s.filter(x => x.date >= mon).length + '/3', 'Diese Woche'], ['scale', bw.length ? nf(bw[bw.length - 1].kg) : '–', 'kg']]
+    .map(([i, v, l]) => `<div class="chip cut">${ic(i)}<div><b>${v}</b><small>${l}</small></div></div>`).join('');
+  if (!s.length) return `<div class="res">${stats}</div><section class="card hatch cut corner"><h2>Noch leer</h2><p style="margin-top:8px">Speicher dein erstes Training – dann siehst du hier, wie du stärker wirst.</p></section>${bwBlock()}${dataBlock()}`;
+  const rows = Object.values(ALL).map(e => {
     const pts = s.filter(x => x.ex[e.id] && x.ex[e.id].length).map(x => ({ d: x.date, v: score(e, x.ex[e.id]), lab: best(e, x.ex[e.id]), sets: x.ex[e.id] }));
     if (!pts.length) return ''; CH[e.id] = pts; const L = pts[pts.length - 1], ch = pts.length > 1 ? Math.round((L.v / pts[0].v - 1) * 100) : null;
-    let bar = '';
+    let pc, note;
     if (e.t === 'kg') {
-      const tot = e.hi * L.sets.length, got = L.sets.reduce((a, x) => a + Math.min(x.r, e.hi), 0), miss = tot - got, pc = Math.round(got / tot * 100);
-      bar = `<div class="kv"><p class="lab">Bis +1,5 kg</p><b class="${miss ? '' : 'up'}">${pc}%</b></div><div class="pity"><i style="width:${pc}%"></i></div><p class="mut small">${miss ? `Noch ${miss} Wdh. bis zur nächsten Steigerung` : 'Steigerung freigeschaltet – nächstes Mal +1,5 kg'}</p>`;
-    } else {
-      const pc = Math.min(100, Math.round(Math.max(...L.sets.map(x => x.r)) / e.hi * 100));
-      bar = `<div class="kv"><p class="lab">Bis Zielwert</p><b>${pc}%</b></div><div class="pity ice"><i style="width:${pc}%"></i></div><p class="mut small">Ziel: ${e.hi}${e.t === 'sec' ? ' s' : ' Wdh.'} am Stück</p>`;
-    }
-    return `<section class="card cut corner"><div class="ph"><div class="t">${ic(tIcon(e))}<h3>${e.n}</h3></div><span class="delta${ch > 0 ? ' up' : ''}">${ch === null ? 'Erste Einheit' : (ch > 0 ? '+' : '') + ch + ' %'}</span></div>
-   ${bar}<div class="fig"><svg data-ch="${e.id}" role="img" aria-label="Verlauf ${e.n}, zuletzt ${L.lab}"></svg></div></section>`;
+      const tot = e.hi * L.sets.length, got = L.sets.reduce((a, x) => a + Math.min(x.r, e.hi), 0), miss = tot - got; pc = Math.round(got / tot * 100);
+      note = miss ? `Noch ${miss} Wdh. bis +1,5 kg` : 'Level up bereit: nächstes Mal +1,5 kg';
+    } else { pc = Math.min(100, Math.round(Math.max(...L.sets.map(x => x.r)) / e.hi * 100)); note = `Ziel: ${e.hi}${e.t === 'sec' ? ' s' : ' Wdh.'} am Stück`; }
+    return `<details class="pex"><summary><span class="t"><b>${e.n}</b><span class="mut small">${L.lab}</span></span><span class="delta${ch > 0 ? ' up' : ''}">${ch === null ? 'neu' : (ch > 0 ? '+' : '') + ch + ' %'}</span></summary>
+     <div class="pity${e.t === 'kg' ? '' : ' ice'}"><i style="width:${pc}%"></i></div><p class="mut small">${note}</p>
+     <div class="fig"><svg data-ch="${e.id}" role="img" aria-label="Verlauf ${e.n}, zuletzt ${L.lab}"></svg></div></details>`;
   }).join('');
   const hist = s.slice().reverse().map(x => {
     const n = Object.values(x.ex).reduce((a, b) => a + b.length, 0);
     const li = Object.keys(x.ex).map(id => { const e = ALL[id]; if (!e) return ''; return `<li><span>${e.n}</span><span>${x.ex[id].map(z => e.t === 'kg' ? nf(z.kg) + '×' + z.r : z.r + (e.t === 'sec' ? ' s' : '')).join(' · ')}</span></li>`; }).join('');
-    return `<details class="hi"><summary><b>${fmtD(x.date)} · ${x.type}</b><span>${x.light ? 'Leicht · ' : ''}${n} Sätze</span></summary><ul>${li}</ul>${x.note ? `<p class="mut" style="margin-top:6px">${esc(x.note)}</p>` : ''}<button class="lnk red" data-act="del" data-id="${x.id}">${ic('x')}Einheit löschen</button></details>`;
+    return `<details class="hi"><summary><b>${fmtD(x.date)} · ${x.type}</b><span>${x.light ? 'Leicht · ' : ''}${n} Sätze</span></summary><ul>${li}</ul>${x.note ? `<p class="mut" style="margin-top:6px">${esc(x.note)}</p>` : ''}<button class="lnk red" data-act="del" data-id="${x.id}">${ic('x')}Löschen</button></details>`;
   }).join('');
-  return `<div class="sec"><p class="lab">Kraft pro Übung</p><p class="hint">Bester Satz je Einheit</p></div>
-  ${cards}${bwBlock()}
-  <div class="sec"><p class="lab">Verlauf</p></div><section class="card cut corner">${hist}</section>${dataBlock()}`;
+  return `<div class="res">${stats}</div>
+  <div class="sec"><p class="lab">Kraft</p><p class="hint">Antippen für Verlauf</p></div>
+  <section class="card cut corner list">${rows}</section>${bwBlock()}
+  <div class="sec"><p class="lab">Verlauf</p></div><section class="card cut list">${hist}</section>${dataBlock()}`;
 }
 function bwBlock() {
   const b = bwSorted(); CH.bw = b.map(x => ({ d: x.date, v: x.kg, lab: nf(x.kg) + ' kg' }));
   const r = bwRate();
   const rate = r === null ? '' : `<p class="mut small" style="margin-top:6px">Tempo: ${r >= 0 ? '+' : ''}${nf(r.toFixed(2))} kg pro Woche – ${r < 0.2 ? 'eher zu wenig, iss etwas mehr' : r > 0.6 ? 'etwas schnell, ein bisschen weniger essen' : 'passt'}.</p>`;
-  return `<div class="sec"><p class="lab">Körpergewicht</p><p class="hint">Ziel: +0,25–0,5 kg pro Woche</p></div>
- <section class="card cut corner"><div class="ph"><div class="t">${ic('scale')}<h3>Gewichtsverlauf</h3></div></div>
-  ${b.length ? `<div class="fig"><svg data-ch="bw" role="img" aria-label="Verlauf Körpergewicht"></svg></div>${rate}` : '<p class="mut">Noch kein Eintrag. Am besten 1× pro Woche morgens wiegen.</p>'}
+  return `<div class="sec"><p class="lab">Körpergewicht</p><p class="hint">Ziel: +0,25–0,5 kg / Woche</p></div>
+ <section class="card cut corner">
+  ${b.length ? `<div class="fig"><svg data-ch="bw" role="img" aria-label="Verlauf Körpergewicht"></svg></div>${rate}` : '<p class="mut">1× pro Woche morgens wiegen und hier eintragen.</p>'}
   <div class="row"><span class="unit-in"><input id="bwIn" type="number" inputmode="decimal" step="0.1" placeholder="65,0" aria-label="Körpergewicht heute in kg"><b>KG</b></span><button class="btn ghost" data-act="bwadd">${ic('plus')}Eintragen</button></div></section>`;
 }
-const dataBlock = () => `<details class="card cut tech"><summary>${ic('copy')}Daten sichern oder übertragen</summary><p class="mut small">Alles liegt nur auf diesem Gerät. Sichere es als Datei oder Text und importiere es auf einem anderen Gerät. Importieren ersetzt alles Aktuelle. Auch Daten aus dem alten Claude-Logbuch funktionieren.</p><div class="row" style="margin:6px 0 10px"><button class="btn ghost" data-act="dl">${ic('in')}Als Datei</button><button class="btn ghost" data-act="copy">${ic('copy')}Kopieren</button></div><textarea id="imp" rows="3" placeholder="Gesicherte Daten hier einfügen"></textarea><div class="row"><button class="btn ghost" data-act="import">${ic('in')}Importieren</button><label class="btn ghost" style="cursor:pointer">${ic('plan')}Datei wählen<input type="file" accept=".json,application/json" data-act="impfile" hidden></label></div></details>`;
+const dataBlock = () => `<details class="card cut tech"><summary>${ic('copy')}Backup &amp; Übertragen</summary><p class="mut small">Daten liegen nur auf diesem Gerät. Importieren ersetzt alles.</p><div class="row" style="margin:6px 0 10px"><button class="btn ghost" data-act="dl">${ic('in')}Als Datei</button><button class="btn ghost" data-act="copy">${ic('copy')}Kopieren</button></div><textarea id="imp" rows="3" placeholder="Gesicherte Daten hier einfügen"></textarea><div class="row"><button class="btn ghost" data-act="import">${ic('in')}Importieren</button><label class="btn ghost" style="cursor:pointer">${ic('plan')}Datei wählen<input type="file" accept=".json,application/json" data-act="impfile" hidden></label></div></details>`;
 
 function draw(svg) {
   const pts = CH[svg.dataset.ch]; if (!pts || !pts.length) return; const W = svg.clientWidth, H = svg.clientHeight; if (!W || !H) return;
@@ -235,7 +234,8 @@ export const actions = {
   type: b => { draft = makeDraft(b.dataset.v, draft.light, draft.date, draft); saveDraft(); app.render(); },
   done: b => { const id = b.dataset.e, x = draft.ex[id][+b.dataset.i]; x.done = !x.done; b.closest('.sr').classList.toggle('done', x.done); b.setAttribute('aria-pressed', x.done); saveDraft(); if (x.done) startRest(ALL[id].rest); },
   addset: b => { const arr = draft.ex[b.dataset.e], l = arr[arr.length - 1]; arr.push({ kg: l.kg, r: l.r, done: false }); saveDraft(); app.render(); },
-  rmset: b => { draft.ex[b.dataset.e].pop(); saveDraft(); app.render(); },
+  tip: b => { const t = $('#tip-' + b.dataset.e); t.hidden = !t.hidden; b.setAttribute('aria-expanded', !t.hidden); b.classList.toggle('on', !t.hidden); },
+  rmset: b => { if (draft.ex[b.dataset.e].length < 2) return; draft.ex[b.dataset.e].pop(); saveDraft(); app.render(); },
   save: () => saveSession(),
   del: b => {
     const i = S.sessions.findIndex(x => String(x.id) === b.dataset.id); if (i < 0) return;
