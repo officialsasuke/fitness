@@ -19,6 +19,7 @@ function load() {
   try { s = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { s = {}; }
   s.sessions ??= []; s.bw ??= []; s.food ??= {}; s.myFoods ??= []; s.recent ??= [];
   s.goals ??= { kcal: 2900, p: 120, f: 70 };
+  s.rig ??= { bar: 6, p25: 8, p125: 4, p075: 4 };
   return s;
 }
 export const S = load();
@@ -34,6 +35,7 @@ export function replaceState(d) {
   Object.assign(S, d);
   S.sessions ??= []; S.bw ??= []; S.food ??= {}; S.myFoods ??= []; S.recent ??= [];
   S.goals ??= { kcal: 2900, p: 120, f: 70 };
+  S.rig ??= { bar: 6, p25: 8, p125: 4, p075: 4 };
   save();
 }
 

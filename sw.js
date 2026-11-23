@@ -1,6 +1,6 @@
 // Service Worker: App offline verfügbar machen.
 // Bei Änderungen an den Dateien die Versionsnummer erhöhen.
-const VERSION = 'fp-v5';
+const VERSION = 'fp-v6';
 const SHELL = [
   './', 'index.html', 'css/style.css', 'js/main.js', 'js/core.js', 'js/training.js', 'js/food.js', 'js/bg.js',
   'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'

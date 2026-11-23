@@ -17,7 +17,24 @@ export const PLAN = {
     { id: 'curl', n: 'Bizeps-Curls', t: 'kg', kg: 5, lo: 10, hi: 15, sets: 2, rest: 60, tip: 'Ellbogen bleiben am Körper, nicht schwingen, langsam ablassen.' },
     { id: 'tri', n: 'Trizeps über Kopf', t: 'kg', kg: 6, lo: 10, hi: 15, sets: 2, rest: 60, one: 1, tip: 'Eine Hantel mit beiden Händen hinter den Kopf senken, Ellbogen zeigen nach oben.' }] }
 };
-const STEP = 1.5;
+/* Hantelset: Stange + Scheiben (Anzahl gesamt, verteilt auf 2 Hanteln × 2 Seiten) */
+const r2 = v => Math.round(v * 100) / 100;
+function loadMap() {
+  const g = S.rig, n25 = Math.floor(g.p25 / 4), n125 = Math.floor(g.p125 / 4), n075 = Math.floor(g.p075 / 4), m = new Map();
+  for (let a = 0; a <= n25; a++) for (let b = 0; b <= n125; b++) for (let c = 0; c <= n075; c++) {
+    const kg = r2(g.bar + 2 * (2.5 * a + 1.25 * b + 0.75 * c)), cnt = a + b + c, o = m.get(kg);
+    if (!o || cnt < o.cnt) m.set(kg, { a, b, c, cnt });
+  }
+  return m;
+}
+const loadList = () => [...loadMap().keys()].sort((x, y) => x - y);
+const snap = kg => loadList().reduce((b, v) => Math.abs(v - kg) < Math.abs(b - kg) ? v : b);
+const nextUp = kg => loadList().find(v => v > kg + 0.001) ?? kg;
+function plates(kg) {
+  const o = loadMap().get(r2(kg)); if (!o) return '';
+  const p = []; if (o.a) p.push(o.a + '×2,5'); if (o.b) p.push('1,25'); if (o.c) p.push('0,75');
+  return p.length ? 'Scheiben pro Seite: ' + p.join(' + ') + ' kg' : 'Nur die Stange, keine Scheiben';
+}
 const ALL = {}; for (const k in PLAN) for (const e of PLAN[k].ex) ALL[e.id] = e;
 const tIcon = e => e.t === 'kg' ? 'db' : e.t === 'bw' ? 'body' : 'timer';
 
@@ -29,10 +46,10 @@ function lastFor(id) { const s = sorted(); for (let i = s.length - 1; i >= 0; i-
 function suggest(e) {
   const L = lastFor(e.id);
   if (e.t === 'kg') {
-    if (!L) return { kg: e.kg, r: e.lo, short: 'Startgewicht – letzte 2 Wdh. sollen schwer sein' };
+    if (!L) return { kg: snap(e.kg), r: e.lo, short: 'Startgewicht – letzte 2 Wdh. sollen schwer sein' };
     const kg = Math.max(...L.map(x => x.kg)), top = L.every(x => x.r >= e.hi);
-    return top ? { kg: +(kg + STEP).toFixed(2), r: e.lo, short: 'Level up: +1,5 kg' }
-      : { kg, r: Math.min(e.hi, Math.max(...L.map(x => x.r)) + 1), short: 'Gleiches Gewicht, 1 Wdh. mehr' };
+    if (top) { const up = nextUp(kg); return up > kg ? { kg: up, r: e.lo, short: 'Level up: ' + nf(up) + ' kg' } : { kg, r: e.hi, short: 'Mehr Gewicht geht mit deinen Scheiben nicht – Tempo oder Pause ändern' }; }
+    return { kg, r: Math.min(e.hi, Math.max(...L.map(x => x.r)) + 1), short: 'Gleiches Gewicht, 1 Wdh. mehr' };
   }
   const u = e.t === 'sec' ? ' s' : ' Wdh.'; if (!L) return { r: e.lo, short: 'Start mit ' + e.lo + u };
   const b = Math.max(...L.map(x => x.r)); return { r: b + (e.t === 'sec' ? 5 : 1), short: 'Letztes Mal ' + b + u + ' – heute mehr' };
@@ -40,7 +57,7 @@ function suggest(e) {
 function makeDraft(type, light, date, prev) {
   const d = { type, light: !!light, date: date || today(), note: prev ? prev.note : '', bw: prev ? prev.bw : '', ex: {} };
   for (const e of PLAN[type].ex) {
-    const g = suggest(e); let kg = g.kg; if (light && kg) kg = Math.round(kg * .85 * 4) / 4;
+    const g = suggest(e); let kg = g.kg; if (light && kg) kg = snap(kg * .85);
     d.ex[e.id] = Array.from({ length: setsFor(e, light, d.date) }, () => ({ kg: kg ?? 0, r: g.r, done: false }));
   }
   return d;
@@ -80,12 +97,12 @@ export function trainView() {
 function exCard(e, i) {
   const sets = draft.ex[e.id], g = suggest(e), kg = e.t === 'kg';
   const unit = e.t === 'sec' ? 's' : '×';
-  const per = kg ? (e.one ? ' · 1 Hantel' : ' · pro Hand') : '';
+  const per = kg && !e.side ? (e.one ? ' · 1 Hantel' : ' · pro Hand') : '';
   return `<article class="card ex cut ${kg ? '' : 'nokg'}">
-  <div class="exh"><span class="num">${i + 1}</span><div class="t"><h3>${e.n}</h3><p class="tgt">${sets.length} × ${e.lo}–${e.hi}${e.t === 'sec' ? ' s' : ''}${e.side ? ' ' + e.side : ''}${per}</p></div>
+  <div class="exh"><span class="num">${i + 1}</span><div class="t"><h3>${e.n}</h3><p class="tgt">${sets.length} Sätze · ${e.lo}–${e.hi}${e.t === 'sec' ? ' s' : ' Wdh.'}${e.side ? ' ' + e.side : ''}${per}</p></div>
    <button class="ibtn sm" data-act="tip" data-e="${e.id}" aria-label="Technik zu ${e.n}" aria-expanded="false">${ic('info')}</button></div>
   <p class="tip" id="tip-${e.id}" hidden>${e.tip}</p>
-  <p class="sg">${ic('up')}<span>${esc(g.short)}</span></p>
+  <p class="sg">${ic('up')}<span>${esc(g.short)}</span></p>${kg && g.kg ? `<p class="mut small" style="margin:0 0 8px">${plates(g.kg)}</p>` : ''}
   <div class="sets">${sets.map((x, j) => `<div class="sr ${x.done ? 'done' : ''}"><span class="n">${j + 1}</span>${kg ? `<label class="fld"><input type="number" inputmode="decimal" step="0.25" min="0" aria-label="${e.n}, Satz ${j + 1}, kg" data-act="kg" data-e="${e.id}" data-i="${j}" value="${x.kg}"><span>kg</span></label>` : ''}<label class="fld"><input type="number" inputmode="numeric" min="0" aria-label="${e.n}, Satz ${j + 1}, ${e.t === 'sec' ? 'Sekunden' : 'Wiederholungen'}" data-act="r" data-e="${e.id}" data-i="${j}" value="${x.r}"><span>${unit}</span></label><button class="chk" data-act="done" data-e="${e.id}" data-i="${j}" aria-pressed="${!!x.done}" aria-label="Satz ${j + 1} erledigt">${ic('check')}</button></div>`).join('')}</div>
   <div class="exf"><button class="ibtn sm" data-act="rmset" data-e="${e.id}" aria-label="Satz entfernen" ${sets.length > 1 ? '' : 'disabled'}>${ic('minus')}</button><button class="ibtn sm" data-act="addset" data-e="${e.id}" aria-label="Satz hinzufügen">${ic('plus')}</button></div>
  </article>`;
@@ -109,7 +126,7 @@ export function planView() {
   const wk = [['Mo', 'A'], ['Di', ''], ['Mi', 'B'], ['Do', ''], ['Fr', 'A'], ['Sa', ''], ['So', '']];
   const blk = k => {
     const P = PLAN[k];
-    return `<section class="card cut corner"><div class="ph"><div class="t"><span class="dia">${ic('spark')}</span><div><h2 style="font-size:32px">${P.name}</h2><p class="focus" style="margin:0">${P.focus}</p></div></div></div><ol class="pl">${P.ex.map((e, i) => `<li><span class="badge">${i + 1}</span><div><h4>${e.n}</h4><p class="mut">${e.tip}</p></div><div class="pr"><span>${e.sets} × ${e.lo}–${e.hi}${e.t === 'sec' ? ' s' : ''}${e.side ? ' ' + e.side : ''}</span><span class="mut">${e.t === 'kg' ? 'Start ' + nf(e.kg) + ' kg' + (e.one ? ' (1 Hantel)' : ' pro Hand') : e.t === 'bw' ? 'Körpergewicht' : 'Halten'}</span><span class="mut">Pause ${mmss(e.rest)}</span></div></li>`).join('')}</ol></section>`;
+    return `<section class="card cut corner"><div class="ph"><div class="t"><span class="dia">${ic('spark')}</span><div><h2 style="font-size:32px">${P.name}</h2><p class="focus" style="margin:0">${P.focus}</p></div></div></div><ol class="pl">${P.ex.map((e, i) => `<li><span class="badge">${i + 1}</span><div><h4>${e.n}</h4><p class="mut">${e.tip}</p></div><div class="pr"><span>${e.sets} Sätze · ${e.lo}–${e.hi}${e.t === 'sec' ? ' s' : ' Wdh.'}${e.side ? ' ' + e.side : ''}</span><span class="mut">${e.t === 'kg' ? 'Start ' + nf(snap(e.kg)) + ' kg' + (e.one ? ' (1 Hantel)' : ' pro Hand') : e.t === 'bw' ? 'Körpergewicht' : 'Halten'}</span><span class="mut">Pause ${mmss(e.rest)}</span></div></li>`).join('')}</ol></section>`;
   };
   const R = (b, t) => `<li><span><b>${b}</b> ${t}</span></li>`;
   return `<div class="sec"><p class="lab">Wochenrotation</p><p class="hint">Tage frei wählbar</p></div>
@@ -119,7 +136,7 @@ export function planView() {
   <ul class="rules">
    ${R('Woche 1–2:', 'nur 2 Sätze pro Übung, leichter, Technik lernen. Ab Woche 3 volle Sätze – die App stellt das automatisch ein.')}
    ${R('Richtiges Gewicht:', 'Die letzten 2 Wiederholungen sind schwer, 1–2 wären aber noch drin.')}
-   ${R('Steigern:', 'Schaffst du in allen Sätzen die obere Zahl, kommt pro Hantel je eine 0,75-kg-Scheibe pro Seite dazu (+1,5 kg). Die App schlägt es dir vor.')}
+   ${R('Steigern:', 'Schaffst du in allen Sätzen die obere Zahl, kommt das nächste Gewicht dran, das mit deinen Scheiben geht. Die App schlägt es dir vor und zeigt, welche Scheiben pro Seite drauf müssen.')}
    ${R('Tempo:', '2 Sekunden ablassen, kontrolliert hochdrücken.')}
    ${R('Aufwärmen:', '5 Minuten bewegen, dann 1 leichter Satz der ersten Übung.')}
    ${R('Nach hartem Arbeitstag:', 'leichter Muskelkater – „Leichter Tag“ einschalten. Gelenkschmerzen, Schwindel oder völlig platt – Pause und am nächsten Tag nachholen.')}
@@ -132,7 +149,11 @@ export function planView() {
    ${R('Protein:', '105–130 g am Tag, auf 3–4 Mahlzeiten verteilt (Eier, Quark, Skyr, Milch, Hähnchen, Thunfisch, Linsen).')}
    ${R('Trinken:', '2–3 Liter Wasser.')}${R('Schlaf:', '7–9 Stunden – da wachsen die Muskeln.')}</ul></section>
   <div class="sec"><p class="lab">Einstellungen</p></div>
-  <section class="card cut"><label class="tog" style="margin:0"><input type="checkbox" data-act="bg" ${bgEnabled() ? 'checked' : ''}><span class="sw"></span><span><b>Animierter Hintergrund</b><span class="mut small">Ausschalten spart etwas Akku</span></span></label></section>`;
+  <section class="card cut"><label class="tog" style="margin:0"><input type="checkbox" data-act="bg" ${bgEnabled() ? 'checked' : ''}><span class="sw"></span><span><b>Animierter Hintergrund</b><span class="mut small">Ausschalten spart etwas Akku</span></span></label></section>
+  <div class="sec"><p class="lab">Hantelset</p></div>
+  <section class="card cut"><p class="mut small" style="margin-top:0">Gewicht pro Hantelstange und Anzahl der Scheiben insgesamt. Daraus berechnet die App alle möglichen Gewichte.</p>
+   <div class="rig">${[['bar', 'Stange (kg, eine)'], ['p25', 'Scheiben 2,5 kg'], ['p125', 'Scheiben 1,25 kg'], ['p075', 'Scheiben 0,75 kg']].map(([k, l]) => `<label class="mut small">${l}<input type="number" inputmode="decimal" step="${k === 'bar' ? '0.25' : '1'}" min="0" data-act="rig" data-k="${k}" value="${S.rig[k]}"></label>`).join('')}</div>
+   <p class="mut small" style="margin-bottom:0">Möglich pro Hantel: ${loadList().map(nf).join(' · ')} kg</p></section>`;
 }
 
 /* ---------- Fortschritt ---------- */
@@ -229,6 +250,7 @@ export function onInput(ev) {
 export function onChange(ev) {
   const t = ev.target, a = t.dataset.act;
   if (a === 'impfile' && t.files && t.files[0]) { t.files[0].text().then(importData); return; }
+  if (a === 'rig') { const v = parseFloat(String(t.value).replace(',', '.')); if (isFinite(v) && v >= 0) { S.rig[t.dataset.k] = v; save(); app.render(); } return; }
   if (!draft) return;
   if (a === 'light') { draft = makeDraft(draft.type, t.checked, draft.date, draft); saveDraft(); app.render(); }
   else if (a === 'date' && t.value) { draft.date = t.value; saveDraft(); app.render(); }
