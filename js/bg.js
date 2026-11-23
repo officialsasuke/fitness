@@ -77,44 +77,6 @@ function particles(t, move) {
   }
 }
 
-// Eigene, erfundene Figur (Silhouette): zurückgelehnt auf einem Sims, Beine überkreuzt, Haar und Schleier wehen.
-function figure(t) {
-  const s = Math.min(W * 0.62 / 190, H * 0.34 / 190), cx = W * 0.5 + 18 * s, cy = H * 0.56;
-  const w = Math.sin(t * 1.3), w2 = Math.sin(t * 1.3 + 1.4), br = Math.sin(t * 0.9) * 0.8, fl = Math.sin(t * 0.7) * 2;
-  x.save(); x.translate(cx, cy); x.scale(s, s);
-  rings(-12, -40, 135, t * 0.7, 0.75);
-  const body = () => {
-    x.beginPath();
-    // Sims
-    x.moveTo(-70, 6); x.lineTo(100, 6); x.lineTo(100, 16); x.lineTo(-70, 16); x.closePath();
-    // Kopf
-    x.moveTo(46, -96 + br); x.arc(36, -96 + br, 10, 0, TAU);
-    // Rumpf, nach hinten geneigt
-    x.moveTo(-14, -2); x.lineTo(20, 4); x.lineTo(54, -60 + br); x.lineTo(46, -82 + br); x.lineTo(18, -88 + br); x.closePath();
-    // Oberschenkel und Unterschenkel, Bein vorn (höher)
-    x.moveTo(-10, -12); x.lineTo(14, 0); x.lineTo(-40, -42); x.lineTo(-58, -50); x.closePath();
-    x.moveTo(-40, -42); x.lineTo(-58, -50); x.lineTo(-104, -20 + fl); x.lineTo(-100, -8 + fl); x.closePath();
-    // Bein hinten, darüber gekreuzt
-    x.moveTo(-8, -2); x.lineTo(16, 4); x.lineTo(-38, -16); x.lineTo(-54, -24); x.closePath();
-    x.moveTo(-38, -16); x.lineTo(-54, -24); x.lineTo(-88, -4); x.lineTo(-82, 4); x.closePath();
-    // Arm hinten abgestützt
-    x.moveTo(38, -70 + br); x.lineTo(64, -44); x.lineTo(74, -14); x.lineTo(84, -14); x.lineTo(78, -48); x.lineTo(52, -80 + br); x.closePath();
-    // Arm vorn, Hand ruht auf dem Knie
-    x.moveTo(24, -76 + br); x.lineTo(4, -48); x.lineTo(-34, -54); x.lineTo(-34, -64); x.lineTo(10, -64); x.lineTo(34, -86 + br); x.closePath();
-    // langes Haar, weht nach hinten
-    x.moveTo(40, -104 + br); x.lineTo(52, -92); x.lineTo(70 + w * 4, -64); x.lineTo(92 + w2 * 5, -40 + w * 3); x.lineTo(74 + w * 4, -46);
-    x.lineTo(80 + w2 * 6, -66); x.lineTo(54, -80); x.closePath();
-    // Rock / Schleier über die Sims-Kante
-    x.moveTo(-4, 2); x.lineTo(18, 4); x.lineTo(26 + w * 3, 40); x.lineTo(14 + w2 * 5, 76); x.lineTo(2 + w * 4, 48); x.lineTo(-8 + w2 * 3, 78); x.lineTo(-12, 30); x.closePath();
-    // Schleier-Band von der Schulter
-    x.moveTo(44, -66 + br); x.lineTo(70 + w * 4, -90 + w2 * 3); x.lineTo(100 + w2 * 6, -76 + w * 4); x.lineTo(78 + w * 4, -74); x.lineTo(52, -58); x.closePath();
-  };
-  const g = x.createLinearGradient(0, -110, 0, 80);
-  g.addColorStop(0, `rgba(${G},.2)`); g.addColorStop(1, `rgba(${G},.04)`);
-  body(); x.fillStyle = g; x.fill();
-  x.lineWidth = 1.4; x.lineJoin = 'round'; x.strokeStyle = `rgba(${L},.5)`; x.shadowColor = `rgba(${L},.7)`; x.shadowBlur = 14; x.stroke();
-  x.restore();
-}
 function draw(t, move) {
   x.clearRect(0, 0, W, H);
   const R = Math.min(W, 720) * 0.55;
@@ -122,7 +84,6 @@ function draw(t, move) {
   rings(W * 0.88, H * 0.2, R, t, 1.35);
   rings(W * 0.08, H * 0.82, R * 0.75, t * 0.8 + 3, 0.9);
   waves(t);
-  figure(t);
   particles(t, move);
 }
 function frame(ms) {
