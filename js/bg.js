@@ -76,6 +76,40 @@ function particles(t, move) {
     else { x.beginPath(); x.arc(p.x, p.y, p.r, 0, TAU); x.fill(); }
   }
 }
+
+// Eigene, erfundene Kämpferfigur (Silhouette): Mantel weht, Schwert nach oben, Funken steigen auf.
+function figure(t) {
+  const h = Math.min(H * 0.62, 520), s = h / 260, cx = W * 0.5, cy = H * 0.5 + h * 0.5;
+  const w = Math.sin(t * 1.6), w2 = Math.sin(t * 1.6 + 1.2), br = Math.sin(t * 0.9) * 1.2;
+  x.save(); x.translate(cx, cy); x.scale(s, s);
+  rings(0, -125, 150, t * 0.7, 0.75);
+  const body = () => {
+    x.beginPath();
+    // Kopf
+    x.moveTo(9, -178 + br); x.arc(0, -178 + br, 9, 0, TAU);
+    // Rumpf
+    x.moveTo(-16, -166 + br); x.lineTo(16, -166 + br); x.lineTo(12, -100); x.lineTo(-12, -100); x.closePath();
+    // vorderes Bein (angewinkelt) und hinteres Bein (gestreckt)
+    x.moveTo(-12, -102); x.lineTo(3, -102); x.lineTo(14, -52); x.lineTo(34, -4); x.lineTo(22, 0); x.lineTo(-2, -48); x.closePath();
+    x.moveTo(-3, -102); x.lineTo(12, -102); x.lineTo(-12, -54); x.lineTo(-38, -6); x.lineTo(-48, -2); x.lineTo(-44, -12); x.lineTo(-22, -56); x.closePath();
+    // Schwertarm nach oben
+    x.moveTo(12, -164 + br); x.lineTo(26, -190); x.lineTo(32, -206); x.lineTo(40, -204); x.lineTo(35, -184); x.lineTo(22, -156); x.closePath();
+    // Gegenarm nach hinten
+    x.moveTo(-14, -164 + br); x.lineTo(-34, -150); x.lineTo(-56, -138); x.lineTo(-54, -130); x.lineTo(-30, -136); x.lineTo(-12, -148); x.closePath();
+    // Schwert
+    x.moveTo(34, -204); x.lineTo(40, -206); x.lineTo(76, -262); x.lineTo(70, -256); x.closePath();
+    // Mantel, weht nach hinten
+    x.moveTo(-16, -166 + br); x.lineTo(-14, -100);
+    x.lineTo(-40 - w * 4, -64); x.lineTo(-78 - w * 9, -50 + w * 4); x.lineTo(-112 - w2 * 12, -62 + w2 * 6);
+    x.lineTo(-84 - w * 8, -92); x.lineTo(-120 - w2 * 14, -108 + w2 * 5); x.lineTo(-76 - w * 8, -126);
+    x.lineTo(-46, -150); x.closePath();
+  };
+  const g = x.createLinearGradient(0, -260, 0, 0);
+  g.addColorStop(0, `rgba(${G},.2)`); g.addColorStop(1, `rgba(${G},.04)`);
+  body(); x.fillStyle = g; x.fill();
+  x.lineWidth = 1.4; x.lineJoin = 'round'; x.strokeStyle = `rgba(${L},.5)`; x.shadowColor = `rgba(${L},.7)`; x.shadowBlur = 14; x.stroke();
+  x.restore();
+}
 function draw(t, move) {
   x.clearRect(0, 0, W, H);
   const R = Math.min(W, 720) * 0.55;
@@ -83,6 +117,7 @@ function draw(t, move) {
   rings(W * 0.88, H * 0.2, R, t, 1.35);
   rings(W * 0.08, H * 0.82, R * 0.75, t * 0.8 + 3, 0.9);
   waves(t);
+  figure(t);
   particles(t, move);
 }
 function frame(ms) {
