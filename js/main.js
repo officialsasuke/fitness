@@ -3,6 +3,7 @@ import { $, app } from './core.js';
 import * as T from './training.js';
 import * as F from './food.js';
 import { initBg, setBg } from './bg.js';
+import * as Y from './sync.js';
 
 const VIEWS = { training: T.trainView, essen: F.foodView, fortschritt: T.progView, plan: T.planView };
 const view = () => { const h = location.hash.slice(1); return VIEWS[h] ? h : 'training'; };
@@ -22,7 +23,7 @@ function render() {
 }
 app.render = render;
 
-const ACT = { ...T.actions, ...F.actions };
+const ACT = { ...T.actions, ...F.actions, ...Y.actions };
 document.addEventListener('click', ev => {
   const b = ev.target.closest('button[data-act]');
   if (b && ACT[b.dataset.act] && !b.disabled) ACT[b.dataset.act](b, ev);
@@ -38,6 +39,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 
 T.init(); F.init(); initBg();
 render();
+Y.init();
 
 // Offline-Fähigkeit und dauerhafter Speicher
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {

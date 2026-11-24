@@ -1,6 +1,7 @@
 // Trainingsplan, Logbuch, Fortschritt und Plan-Ansicht
 import { bgEnabled } from './bg.js';
-import { $, S, save, app, toast, esc, ic, today, fmtD, fmtS, nf, mmss, days, setBw, bwSorted, bwRate, replaceState, mondayOf } from './core.js';
+import { syncBlock } from './sync.js';
+import { $, S, save, app, toast, esc, ic, today, fmtD, fmtS, nf, mmss, days, setBw, bwSorted, bwRate, replaceState, mondayOf, bury, unbury } from './core.js';
 
 export const PLAN = {
   A: { name: 'Training A', focus: 'Beine · Brust · Rücken · Schultern · Bauch', ex: [
@@ -153,7 +154,8 @@ export function planView() {
   <div class="sec"><p class="lab">Hantelset</p></div>
   <section class="card cut"><p class="mut small" style="margin-top:0">Gewicht pro Hantelstange und Anzahl der Scheiben insgesamt. Daraus berechnet die App alle möglichen Gewichte.</p>
    <div class="rig">${[['bar', 'Stange (kg, eine)'], ['p25', 'Scheiben 2,5 kg'], ['p125', 'Scheiben 1,25 kg'], ['p075', 'Scheiben 0,75 kg']].map(([k, l]) => `<label class="mut small">${l}<input type="number" inputmode="decimal" step="${k === 'bar' ? '0.25' : '1'}" min="0" data-act="rig" data-k="${k}" value="${S.rig[k]}"></label>`).join('')}</div>
-   <p class="mut small" style="margin-bottom:0">Möglich pro Hantel: ${loadList().map(nf).join(' · ')} kg</p></section>`;
+   <p class="mut small" style="margin-bottom:0">Möglich pro Hantel: ${loadList().map(nf).join(' · ')} kg</p></section>
+  <div class="sec"><p class="lab">Synchronisieren</p></div>${syncBlock()}`;
 }
 
 /* ---------- Fortschritt ---------- */
@@ -250,7 +252,7 @@ export function onInput(ev) {
 export function onChange(ev) {
   const t = ev.target, a = t.dataset.act;
   if (a === 'impfile' && t.files && t.files[0]) { t.files[0].text().then(importData); return; }
-  if (a === 'rig') { const v = parseFloat(String(t.value).replace(',', '.')); if (isFinite(v) && v >= 0) { S.rig[t.dataset.k] = v; save(); app.render(); } return; }
+  if (a === 'rig') { const v = parseFloat(String(t.value).replace(',', '.')); if (isFinite(v) && v >= 0) { S.rig[t.dataset.k] = v; S.stamp.rig = Date.now(); save(); app.render(); } return; }
   if (!draft) return;
   if (a === 'light') { draft = makeDraft(draft.type, t.checked, draft.date, draft); saveDraft(); app.render(); }
   else if (a === 'date' && t.value) { draft.date = t.value; saveDraft(); app.render(); }
@@ -264,8 +266,8 @@ export const actions = {
   save: () => saveSession(),
   del: b => {
     const i = S.sessions.findIndex(x => String(x.id) === b.dataset.id); if (i < 0) return;
-    const [rm] = S.sessions.splice(i, 1); save(); app.render();
-    toast('Einheit gelöscht.', () => { S.sessions.push(rm); save(); app.render(); });
+    const [rm] = S.sessions.splice(i, 1); bury('s:' + rm.id); save(); app.render();
+    toast('Einheit gelöscht.', () => { S.sessions.push(rm); unbury('s:' + rm.id); save(); app.render(); });
   },
   bwadd: () => { const v = parseFloat(String($('#bwIn').value).replace(',', '.')); if (!(v > 30 && v < 250)) { toast('Bitte ein Gewicht in kg eingeben.'); return; } setBw(today(), v); save(); app.render(); toast('Gewicht eingetragen.'); },
   copy: async () => { try { await navigator.clipboard.writeText(JSON.stringify(S)); toast('Daten kopiert.'); } catch (e) { $('#imp').value = JSON.stringify(S); toast('Text steht im Feld – markieren und kopieren.'); } },

@@ -20,14 +20,20 @@ function load() {
   s.sessions ??= []; s.bw ??= []; s.food ??= {}; s.myFoods ??= []; s.recent ??= [];
   s.goals ??= { kcal: 2900, p: 120, f: 70 };
   s.rig ??= { bar: 6, p25: 8, p125: 4, p075: 4 };
+  s.tomb ??= {}; s.stamp ??= {};
   return s;
 }
 export const S = load();
 
-export function save() {
+export const hooks = { onSave: null };
+export function save(quiet) {
   try { localStorage.setItem(KEY, JSON.stringify(S)); }
-  catch (e) { toast('Speichern fehlgeschlagen – ist der Speicher voll?'); }
+  catch (e) { toast('Speichern fehlgeschlagen – ist der Speicher voll?'); return; }
+  if (!quiet && hooks.onSave) hooks.onSave();
 }
+/* Löschmarken für den Abgleich zwischen Geräten */
+export const bury = k => { S.tomb[k] = Date.now(); };
+export const unbury = k => { delete S.tomb[k]; };
 
 /* Ersetzt den gesamten Zustand (Import) */
 export function replaceState(d) {
@@ -36,6 +42,7 @@ export function replaceState(d) {
   S.sessions ??= []; S.bw ??= []; S.food ??= {}; S.myFoods ??= []; S.recent ??= [];
   S.goals ??= { kcal: 2900, p: 120, f: 70 };
   S.rig ??= { bar: 6, p25: 8, p125: 4, p075: 4 };
+  S.tomb ??= {}; S.stamp ??= {};
   save();
 }
 
@@ -50,7 +57,7 @@ export function toast(m, undo) {
   clearTimeout(tt); tt = setTimeout(() => { t.hidden = true; }, 6000);
 }
 
-export function setBw(date, kg) { S.bw = S.bw.filter(x => x.date !== date); S.bw.push({ date, kg: +kg.toFixed(1) }); }
+export function setBw(date, kg) { S.bw = S.bw.filter(x => x.date !== date); S.bw.push({ date, kg: +kg.toFixed(1), u: Date.now() }); }
 export const bwSorted = () => S.bw.slice().sort((a, b) => a.date < b.date ? -1 : 1);
 
 /* Gewichtstempo in kg pro Woche, wenn genug Daten da sind */

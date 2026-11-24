@@ -1,5 +1,5 @@
 // Kalorien-Tracker mit Open Food Facts, Barcode-Scanner und eigenen Lebensmitteln
-import { $, S, save, app, toast, esc, ic, today, addDays, fmtD, fmtK, nf, bwRate } from './core.js';
+import { $, S, save, app, toast, esc, ic, today, addDays, fmtD, fmtK, nf, bwRate, bury, unbury } from './core.js';
 
 export const MEALS = [['fr', 'Frühstück'], ['mi', 'Mittagessen'], ['ab', 'Abendessen'], ['sn', 'Snacks']];
 const ZX_URL = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js';
@@ -278,7 +278,7 @@ function commitEntry() {
   const p = sheet.sel, d = sheet.date || day;
   if (!S.food[d]) S.food[d] = [];
   if (sheet.mode === 'edit') {
-    const e = S.food[d].find(x => x.id === sheet.id); if (e) { e.g = g; e.meal = sheet.meal; }
+    const e = S.food[d].find(x => x.id === sheet.id); if (e) { e.g = g; e.meal = sheet.meal; e.u = Date.now(); }
   } else {
     S.food[d].push({ id: Date.now(), meal: sheet.meal, key: p.key, name: p.name, brand: p.brand || '', g, n: { ...p.n } });
     if (p.src !== 'basis') remember(p);
@@ -308,8 +308,8 @@ export const actions = {
   'f-commit': () => commitEntry(),
   'f-delent': () => {
     const d = sheet.date || day, arr = S.food[d] || [], i = arr.findIndex(x => x.id === sheet.id); if (i < 0) return;
-    const [rm] = arr.splice(i, 1); save(); closeSheet(); app.render();
-    toast(rm.name + ' gelöscht.', () => { (S.food[d] ||= []).push(rm); save(); app.render(); });
+    const [rm] = arr.splice(i, 1); bury('f:' + rm.id); save(); closeSheet(); app.render();
+    toast(rm.name + ' gelöscht.', () => { (S.food[d] ||= []).push(rm); unbury('f:' + rm.id); save(); app.render(); });
   },
   'f-scanstart': () => startScan(),
   'f-scanstop': () => { stopScan(); scan.msg = ''; $('#fScan').innerHTML = scanHTML(); },
@@ -326,7 +326,7 @@ export const actions = {
   'f-goals': () => {
     const k = +$('#gK').value, p = +$('#gP').value, f = +$('#gF').value;
     if (!(k >= 1200 && k <= 6000) || !(p >= 30 && p <= 300) || !(f >= 20 && f <= 250)) { toast('Bitte realistische Werte eintragen.'); return; }
-    S.goals = { kcal: Math.round(k), p: Math.round(p), f: Math.round(f) }; save(); app.render(); toast('Ziel gespeichert.');
+    S.goals = { kcal: Math.round(k), p: Math.round(p), f: Math.round(f) }; S.stamp.goals = Date.now(); save(); app.render(); toast('Ziel gespeichert.');
   }
 };
 export function init() {
