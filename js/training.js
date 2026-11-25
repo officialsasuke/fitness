@@ -12,7 +12,7 @@ export const PLAN = {
     { id: 'plank', n: 'Plank', t: 'sec', lo: 30, hi: 45, sets: 3, rest: 60, tip: 'Unterarme unter den Schultern, Körper bildet eine Linie von Kopf bis Ferse.' }] },
   B: { name: 'Training B', focus: 'Beinrückseite · Beine · Brust · Rücken · Arme', ex: [
     { id: 'rdl', n: 'Rumänisches Kreuzheben', t: 'kg', kg: 10, lo: 8, hi: 12, sets: 3, rest: 120, tip: 'Knie leicht gebeugt, Hüfte nach hinten schieben, Hanteln nah an den Beinen, Rücken gerade.' },
-    { id: 'bss', n: 'Bulgarian Split Squat', t: 'kg', kg: 6, lo: 8, hi: 10, sets: 3, rest: 90, side: 'pro Bein', tip: 'Hinterer Fuß auf einem Stuhl, vorderes Knie über dem Fuß, senkrecht absenken.' },
+    { id: 'split', n: 'Split Squat', t: 'kg', kg: 6, lo: 8, hi: 10, sets: 3, rest: 90, side: 'pro Bein', tip: 'Großer Schritt nach vorn, hinterer Fuß bleibt auf dem Boden. Senkrecht absenken, bis das hintere Knie fast den Boden berührt. Vorderes Knie bleibt über dem Fuß. Hanteln seitlich halten, bei Wackeln eine Hand an die Wand.' },
     { id: 'push', n: 'Liegestütze', t: 'bw', lo: 6, hi: 12, sets: 3, rest: 90, tip: 'Körper gerade, Brust bis kurz über den Boden. Zu schwer? Erst auf den Knien.' },
     { id: 'row2', n: 'Vorgebeugtes Rudern', t: 'kg', kg: 8, lo: 8, hi: 12, sets: 3, rest: 90, tip: 'Oberkörper ca. 45° vorgebeugt, Rücken gerade, beide Hanteln zum Bauch ziehen.' },
     { id: 'curl', n: 'Bizeps-Curls', t: 'kg', kg: 5, lo: 10, hi: 15, sets: 2, rest: 60, tip: 'Ellbogen bleiben am Körper, nicht schwingen, langsam ablassen.' },
