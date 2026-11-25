@@ -28,13 +28,17 @@ function loadMap() {
   }
   return m;
 }
-const loadList = () => [...loadMap().keys()].sort((x, y) => x - y);
+/* Eingegeben wird entweder das Gesamtgewicht pro Hantel (incl) oder nur das Gewicht der Scheiben (Standard, Stange wird nicht mitgezählt). */
+const off = () => S.rig.incl ? 0 : S.rig.bar;
+const startKg = e => S.rig.incl ? e.kg : Math.max(1.5, r2(e.kg - S.rig.bar));
+const loadList = () => [...loadMap().keys()].map(t => r2(t - off())).sort((x, y) => x - y);
 const snap = kg => loadList().reduce((b, v) => Math.abs(v - kg) < Math.abs(b - kg) ? v : b);
 const nextUp = kg => loadList().find(v => v > kg + 0.001) ?? kg;
 function plates(kg) {
-  const o = loadMap().get(r2(kg)); if (!o) return '';
+  const total = r2(kg + off()), o = loadMap().get(total); if (!o) return '';
   const p = []; if (o.a) p.push(o.a + '×2,5'); if (o.b) p.push('1,25'); if (o.c) p.push('0,75');
-  return p.length ? 'Scheiben pro Seite: ' + p.join(' + ') + ' kg' : 'Nur die Stange, keine Scheiben';
+  const tail = S.rig.incl ? '' : ` · mit Stange ${nf(total)} kg pro Hand`;
+  return (p.length ? 'Scheiben pro Seite: ' + p.join(' + ') + ' kg' : 'Nur die Stange, keine Scheiben') + tail;
 }
 const ALL = {}; for (const k in PLAN) for (const e of PLAN[k].ex) ALL[e.id] = e;
 const tIcon = e => e.t === 'kg' ? 'db' : e.t === 'bw' ? 'body' : 'timer';
@@ -47,7 +51,7 @@ function lastFor(id) { const s = sorted(); for (let i = s.length - 1; i >= 0; i-
 function suggest(e) {
   const L = lastFor(e.id);
   if (e.t === 'kg') {
-    if (!L) return { kg: snap(e.kg), r: e.lo, short: 'Startgewicht – letzte 2 Wdh. sollen schwer sein' };
+    if (!L) return { kg: snap(startKg(e)), r: e.lo, short: 'Startgewicht – letzte 2 Wdh. sollen schwer sein' };
     const kg = Math.max(...L.map(x => x.kg)), top = L.every(x => x.r >= e.hi);
     if (top) { const up = nextUp(kg); return up > kg ? { kg: up, r: e.lo, short: 'Level up: ' + nf(up) + ' kg' } : { kg, r: e.hi, short: 'Mehr Gewicht geht mit deinen Scheiben nicht – Tempo oder Pause ändern' }; }
     return { kg, r: Math.min(e.hi, Math.max(...L.map(x => x.r)) + 1), short: 'Gleiches Gewicht, 1 Wdh. mehr' };
@@ -127,7 +131,7 @@ export function planView() {
   const wk = [['Mo', 'A'], ['Di', ''], ['Mi', 'B'], ['Do', ''], ['Fr', 'A'], ['Sa', ''], ['So', '']];
   const blk = k => {
     const P = PLAN[k];
-    return `<section class="card cut corner"><div class="ph"><div class="t"><span class="dia">${ic('spark')}</span><div><h2 style="font-size:32px">${P.name}</h2><p class="focus" style="margin:0">${P.focus}</p></div></div></div><ol class="pl">${P.ex.map((e, i) => `<li><span class="badge">${i + 1}</span><div><h4>${e.n}</h4><p class="mut">${e.tip}</p></div><div class="pr"><span>${e.sets} Sätze · ${e.lo}–${e.hi}${e.t === 'sec' ? ' s' : ' Wdh.'}${e.side ? ' ' + e.side : ''}</span><span class="mut">${e.t === 'kg' ? 'Start ' + nf(snap(e.kg)) + ' kg' + (e.one ? ' (1 Hantel)' : ' pro Hand') : e.t === 'bw' ? 'Körpergewicht' : 'Halten'}</span><span class="mut">Pause ${mmss(e.rest)}</span></div></li>`).join('')}</ol></section>`;
+    return `<section class="card cut corner"><div class="ph"><div class="t"><span class="dia">${ic('spark')}</span><div><h2 style="font-size:32px">${P.name}</h2><p class="focus" style="margin:0">${P.focus}</p></div></div></div><ol class="pl">${P.ex.map((e, i) => `<li><span class="badge">${i + 1}</span><div><h4>${e.n}</h4><p class="mut">${e.tip}</p></div><div class="pr"><span>${e.sets} Sätze · ${e.lo}–${e.hi}${e.t === 'sec' ? ' s' : ' Wdh.'}${e.side ? ' ' + e.side : ''}</span><span class="mut">${e.t === 'kg' ? 'Start ' + nf(snap(startKg(e))) + ' kg' + (e.one ? ' (1 Hantel)' : ' pro Hand') : e.t === 'bw' ? 'Körpergewicht' : 'Halten'}</span><span class="mut">Pause ${mmss(e.rest)}</span></div></li>`).join('')}</ol></section>`;
   };
   const R = (b, t) => `<li><span><b>${b}</b> ${t}</span></li>`;
   return `<div class="sec"><p class="lab">Wochenrotation</p><p class="hint">Tage frei wählbar</p></div>
@@ -154,7 +158,8 @@ export function planView() {
   <div class="sec"><p class="lab">Hantelset</p></div>
   <section class="card cut"><p class="mut small" style="margin-top:0">Gewicht pro Hantelstange und Anzahl der Scheiben insgesamt. Daraus berechnet die App alle möglichen Gewichte.</p>
    <div class="rig">${[['bar', 'Stange (kg, eine)'], ['p25', 'Scheiben 2,5 kg'], ['p125', 'Scheiben 1,25 kg'], ['p075', 'Scheiben 0,75 kg']].map(([k, l]) => `<label class="mut small">${l}<input type="number" inputmode="decimal" step="${k === 'bar' ? '0.25' : '1'}" min="0" data-act="rig" data-k="${k}" value="${S.rig[k]}"></label>`).join('')}</div>
-   <p class="mut small" style="margin-bottom:0">Möglich pro Hantel: ${loadList().map(nf).join(' · ')} kg</p></section>
+   <label class="tog" style="margin:12px 0"><input type="checkbox" data-act="incl" ${S.rig.incl ? 'checked' : ''}><span class="sw"></span><span><b>Stange mitzählen</b><span class="mut small">${S.rig.incl ? 'Du trägst das Gesamtgewicht pro Hantel ein.' : 'Aus: Du trägst nur das Gewicht der Scheiben pro Hantel ein.'}</span></span></label>
+   <p class="mut small" style="margin-bottom:0">Möglich pro Hantel${S.rig.incl ? '' : ' (nur Scheiben)'}: ${loadList().map(nf).join(' · ')} kg</p></section>
   <div class="sec"><p class="lab">Synchronisieren</p></div>${syncBlock()}`;
 }
 
@@ -252,6 +257,7 @@ export function onInput(ev) {
 export function onChange(ev) {
   const t = ev.target, a = t.dataset.act;
   if (a === 'impfile' && t.files && t.files[0]) { t.files[0].text().then(importData); return; }
+  if (a === 'incl') { S.rig.incl = t.checked; S.stamp.rig = Date.now(); save(); app.render(); return; }
   if (a === 'rig') { const v = parseFloat(String(t.value).replace(',', '.')); if (isFinite(v) && v >= 0) { S.rig[t.dataset.k] = v; S.stamp.rig = Date.now(); save(); app.render(); } return; }
   if (!draft) return;
   if (a === 'light') { draft = makeDraft(draft.type, t.checked, draft.date, draft); saveDraft(); app.render(); }
